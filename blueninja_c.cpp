@@ -46,7 +46,7 @@ int main()
 		a[i] = Transform_Raw(a[i]);
 		g[i] = Transform_Raw(g[i]);
 		b_a[i] = a[i];
-		b_g[i] = g[i];
+//		b_g[i] = g[i];
 	}
 	FrameMatrix(100,a[0], a[1], a[2], g[0], g[1], g[2],&fm_a[0], &fm_a[1], &fm_a[2]);
 
@@ -78,7 +78,7 @@ int main()
 			a[i] = 0.9 * (float)b_a[i] + 0.1 * (float)a[i];
 //			g[i] = 0.9 * (float)b_g[i] + 0.1 * (float)g[i];
 			b_a[i] = a[i];
-			b_g[i] = g[i];
+//			b_g[i] = g[i];
 		}
 		FrameMatrix(ms[0]-ms[1],a[0], a[1], a[2], g[0], g[1], g[2], &fm_a[0], &fm_a[1], &fm_a[2]);
 
@@ -192,7 +192,7 @@ void FrameMatrix(int time,int ax, int ay, int az, int gx, int gy, int gz, int *c
 	rot[2][1] = lambda * sin(theta[3]) + nyu * mew * (1 - cos(theta[3]));
 	rot[2][2] = cos(theta[3]) + nyu * nyu * (1 - cos(theta[3]));
 
-	//方位を導入したE0の算出
+	//E0の算出
 	Ezero[0][0] = cos(theta[0]);
 	Ezero[1][0] = 0;
 	Ezero[2][0] = sin(theta[0]);
