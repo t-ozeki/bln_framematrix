@@ -35,22 +35,22 @@ int main()
 
 	//一行目
 	fscanf(fp, "%s",s);
-	fprintf(fwp, "ms,ax,ay,az,gx,gy,gz,fm_ax,fm_ay,fm_az,vx,vy,vz\n");
+	fprintf(fwp, "ms,ax,ay,az,gx,gy,gz,fm_ax,fm_ay,fm_az,vx(km/h),vy(km/h),vz(km/h)\n");
+
 
 	//初期値設定 二行目
 	fscanf(fp, "%d,%d,%d,%d,%d,%d,%d", &ms[0], &a[0], &a[1], &a[2], &g[0], &g[1], &g[2]);
 	ms[1] = ms[0];
-
+	//符号付変換
 	for (int i = 0; i < 3; i++) {
 		a[i] = Transform_Raw(a[i]);
 		g[i] = Transform_Raw(g[i]);
-	}
-	for (int i = 0; i < 3; i++) {
 		b_a[i] = a[i];
 		b_g[i] = g[i];
 	}
 	FrameMatrix(100,a[0], a[1], a[2], g[0], g[1], g[2],&fm_a[0], &fm_a[1], &fm_a[2]);
 
+	//速度変換 生値のm/s^2変換で/2048*GRV、m/s -> km/h変換で*3.6
 	for (int i = 0; i < 3; i++) {
 		av[i] += ((float)fm_a[i]/2048*GRV) * TIME*0.001 *3.6;
 	}
@@ -67,23 +67,22 @@ int main()
 	while ((ret = fscanf(fp, "%d,%d,%d,%d,%d,%d,%d", &ms[0], &a[0], &a[1], &a[2], &g[0], &g[1], &g[2] )) != EOF) {
 		count++;
 
-		//ローパスフィルタ
+		//符号付変換
 		for (int i = 0; i < 3; i++) {
 			a[i] = Transform_Raw(a[i]);
 			g[i] = Transform_Raw(g[i]);
 		}
 
+		//LPF
 		for (int i = 0; i < 3; i++) {
-
 			a[i] = 0.9 * (float)b_a[i] + 0.1 * (float)a[i];
-			g[i] = 0.9 * (float)b_g[i] + 0.1 * (float)g[i];
+//			g[i] = 0.9 * (float)b_g[i] + 0.1 * (float)g[i];
 			b_a[i] = a[i];
 			b_g[i] = g[i];
-
 		}
 		FrameMatrix(ms[0]-ms[1],a[0], a[1], a[2], g[0], g[1], g[2], &fm_a[0], &fm_a[1], &fm_a[2]);
 
-
+		//速度変換 生値のm/s^2変換で/2048*GRV、m/s -> km/h変換で*3.6
 		for (int i = 0; i < 3; i++) {
 			av[i] += ((float)fm_a[i] / 2048 * GRV) * TIME * 0.001 *3.6;
 		}
@@ -118,10 +117,10 @@ int Transform_Raw(int val) {
 }
 
 	
-void EraseOffset(int *ax, int *ay, int *az, int *gx, int *gy, int *gz) {
-	*ax -= -12;
-	*ay -= 98;
-	*az -= 1997;
+void EraseOffset(int *gx, int *gy, int *gz) {
+//	*ax -= -12;
+//	*ay -= 98;
+//	*az -= 1997;
 	*gx -= -20;
 	*gy -= -3;
 	*gz -= 3;
@@ -157,7 +156,8 @@ void FrameMatrix(int time,int ax, int ay, int az, int gx, int gy, int gz, int *c
 	//単位時間dtの算出
 	dt = 0.001*time;
 
-	//回転角度theta = ｜ω'｜ * dt
+	//回転角度theta
+	//重力加速度成分
 	theta[0] = asin(-12 / 2048);
 	theta[1] = asin( 98 / 2048);
 	theta[2] = asin(1997/ 2048);
@@ -165,9 +165,10 @@ void FrameMatrix(int time,int ax, int ay, int az, int gx, int gy, int gz, int *c
 
 	//［λμν］＝　ω' / ｜ω'｜　　
 	if (omega == 0) {
-		lambda = 0;
-		mew = 0;
-		nyu = 0;
+		*cax = a[0];
+		*cay = a[1];
+		*caz = a[2];
+		return;
 	}
 	else {
 		lambda = g[0] / omega;
