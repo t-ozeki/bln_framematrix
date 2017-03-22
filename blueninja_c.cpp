@@ -11,7 +11,7 @@
 
 int Transform_Raw(int val);
 void FrameMatrix(int time,int ax, int ay, int az, int gx, int gy, int gz, int *cax, int *cay, int *caz);
-void EraseOffset(int *gx, int *gy,int *gz);
+void EraseOffset(int *ax,int *ay,int *az,int *gx, int *gy,int *gz);
 
 int main()
 {
@@ -35,7 +35,7 @@ int main()
 
 	//一行目
 	fscanf(fp, "%s",s);
-	fprintf(fwp, "ms,ax,ay,az,gx,gy,gz,fm_ax,fm_ay,fm_az,vx(km/h),vy(km/h),vz(km/h)\n");
+	fprintf(fwp, "ms,ax,ay,az,gx,gy,gz,fm_ax,fm_ay,fm_az,vx(km/h),vy(km/h),vz(km/h),spd(km/h)\n");
 
 
 	//初期値設定 二行目
@@ -49,18 +49,19 @@ int main()
 //		b_g[i] = g[i];
 	}
 	FrameMatrix(100,a[0], a[1], a[2], g[0], g[1], g[2],&fm_a[0], &fm_a[1], &fm_a[2]);
+	EraseOffset(&fm_a[0], &fm_a[1], &fm_a[2], &g[0], &g[1], &g[2]);
 
 	//速度変換 生値のm/s^2変換で/2048*GRV、m/s -> km/h変換で*3.6
 	for (int i = 0; i < 3; i++) {
 		av[i] += ((float)fm_a[i]/2048*GRV) * TIME*0.001 *3.6;
 	}
-	//             1  2  3  4  5  6  7  8  9 10 11 12   13   14
-	fprintf(fwp, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%.2f,%.2f\n",
+	//             1  2  3  4  5  6  7  8  9 10 11 12   13   14 15
+	fprintf(fwp, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%.2f,%.2f,%.2f\n",
 		ms[0],
 		a[0],a[1],a[2],
 		g[0],g[1],g[2],
 		fm_a[0],fm_a[1],fm_a[2],
-		av[0], av[1], av[2]);
+		av[0], av[1], av[2],sqrt(av[0]*av[0] + av[1]*av[1] + av[2]*av[2]));
 
 	//*****************
 
@@ -81,6 +82,7 @@ int main()
 //			b_g[i] = g[i];
 		}
 		FrameMatrix(ms[0]-ms[1],a[0], a[1], a[2], g[0], g[1], g[2], &fm_a[0], &fm_a[1], &fm_a[2]);
+		EraseOffset(&fm_a[0], &fm_a[1], &fm_a[2], &g[0], &g[1], &g[2]);
 
 		//速度変換 生値のm/s^2変換で/2048*GRV、m/s -> km/h変換で*3.6
 		for (int i = 0; i < 3; i++) {
@@ -88,12 +90,13 @@ int main()
 		}
 
 		ms[1] = ms[0];
-		fprintf(fwp, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%.2f,%.2f\n",
+		//             1  2  3  4  5  6  7  8  9 10 11 12   13   14 15
+		fprintf(fwp, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%.2f,%.2f,%.2f\n",
 			ms[0],
 			a[0], a[1], a[2],
 			g[0], g[1], g[2],
 			fm_a[0], fm_a[1], fm_a[2],
-			av[0], av[1], av[2]);
+			av[0], av[1], av[2], sqrt(av[0] * av[0] + av[1] * av[1] + av[2] * av[2]));
 
 	}
 
@@ -117,10 +120,10 @@ int Transform_Raw(int val) {
 }
 
 	
-void EraseOffset(int *gx, int *gy, int *gz) {
-//	*ax -= -12;
-//	*ay -= 98;
-//	*az -= 1997;
+void EraseOffset(int *ax, int *ay, int *az, int *gx, int *gy, int *gz) {
+	*ax -= -12;
+	*ay -= 98;
+	*az -= 1997;
 	*gx -= -20;
 	*gy -= -3;
 	*gz -= 3;
@@ -158,9 +161,9 @@ void FrameMatrix(int time,int ax, int ay, int az, int gx, int gy, int gz, int *c
 
 	//回転角度theta
 	//重力加速度成分
-	theta[0] = asin(-12 / 2048);
-	theta[1] = asin( 98 / 2048);
-	theta[2] = asin(1997/ 2048);
+	theta[0] = asin(-12.0 / 2048.0);
+	theta[1] = asin( 98.0 / 2048.0);
+	theta[2] = asin(1997.0 / 2048.0);
 	theta[3] = omega * dt;
 
 	//［λμν］＝　ω' / ｜ω'｜　　
@@ -182,8 +185,8 @@ void FrameMatrix(int time,int ax, int ay, int az, int gx, int gy, int gz, int *c
 	//M =sqrt(X^2+Y^2+Z^2)
 
 	//回転行列Rωθ
-	rot[0][0] = cos(theta[3]) + nyu * nyu * (1 - cos(theta[3]));
-	rot[0][1] = nyu * mew * (1 - cos(theta[3])) - nyu * sin(theta[3]);
+	rot[0][0] = cos(theta[3]) + lambda * lambda * (1 - cos(theta[3]));
+	rot[0][1] = lambda * mew * (1 - cos(theta[3])) - nyu * sin(theta[3]);
 	rot[0][2] = mew * sin(theta[3]) + lambda * nyu * (1 - cos(theta[3]));
 	rot[1][0] = nyu * sin(theta[3]) + mew * lambda * (1 - cos(theta[3]));
 	rot[1][1] = cos(theta[3]) + mew * mew * (1 - cos(theta[3]));
@@ -214,8 +217,8 @@ void FrameMatrix(int time,int ax, int ay, int az, int gx, int gy, int gz, int *c
 	*cay = re[1][0] * a[0] + re[1][1] * a[1] + re[1][2] * a[2];
 	*caz = re[2][0] * a[0] + re[2][1] * a[1] + re[2][2] * a[2];
 
-	if (*cax < -2100000000) {
-		printf("%f,%f,%f,%f\n",nyu, re[0][0], re[0][1], re[0][2]);
-	}
+//	printf("%f,%f,%f,%f\n", theta[0], theta[1], theta[2], asin(1997 / 2048));
+//	printf("%f,%f,%f\n",re[1][0], re[1][1], re[1][2]);
+//	printf("%f,%f,%f\n",re[2][0], re[2][1], re[2][2]);
 
 }
