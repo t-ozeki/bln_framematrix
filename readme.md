@@ -1,4 +1,5 @@
-出力  
+teibou_ouro.csvを読み込んで  
+teibou_ouro_calc.csvに書きます  
   
 ax,y,z    : LPF後の符号付きの生値 [1/2048 G]  
 gx,y,z    : 符号付きの生値 [1/16.4 deg/s]  
